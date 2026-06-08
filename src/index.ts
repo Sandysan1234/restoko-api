@@ -10,6 +10,7 @@ import { authRoutes } from "./routes/auth.routes";
 import { userRoutes } from "./routes/user.routes";
 import { orgRoutes } from "./routes/org.routes";
 import { env } from "./env";
+import { catalogRoutes } from "./routes/catalog.routes";
 
 const app = factory.createApp();
 
@@ -53,6 +54,7 @@ app.use("/api/orgs/*", authMiddleware);
 
 app.route("/api/users", userRoutes);
 app.route("/api/orgs", orgRoutes);
+app.route("/api/cataloge", catalogRoutes);
 
 // ─── Error Handling ───────────────────────────────────────────────────────────
 

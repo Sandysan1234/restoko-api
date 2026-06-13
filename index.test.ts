@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { db } from "./src/db";
 import { items, itemVariations, NewItem } from "./src/db/schema";
 import { eq } from "drizzle-orm";
@@ -16,21 +16,27 @@ test("2 + 2", async () => {
       })
       .returning();
 
-    await tx.insert(itemVariations).values({
-      itemId: item.id,
-      name: "Small",
-      price: `18000`,
-      itemAttributeId: 3,
-    });
+    const [variation] = await tx
+      .insert(itemVariations)
+      .values({
+        itemId: item.id,
+        name: "Small",
+        price: `18000`,
+        itemAttributeId: 3,
+      })
+      .returning();
 
-    await tx.insert(itemVariations).values({
-      itemId: item.id,
-      name: "Large",
-      price: `22000`,
-      itemAttributeId: 3,
-    });
+    return { item, variation };
   });
-  console.log(data);
 
-  expect(data).toBe(data);
+  expect(data).toBeDefined();
+  expect(data.item.name).toBe("Coffee Marinasi");
+  expect(data.variation.itemId).toBe(data.item.id);
+  expect(data.variation.name).toBe("Small");
+});
+test("tes apapaun", async (c) => {
+  const user = {c.var.user!;}
+  const itemdata = await db.select().from(items);
+  console.log(itemdata);
+  expect(itemdata).toBe(itemdata);
 });

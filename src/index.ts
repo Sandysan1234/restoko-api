@@ -51,10 +51,11 @@ app.route("/api/auth", authRoutes);
 // Apply auth middleware to all /api/users/* and /api/orgs/* routes
 app.use("/api/users/*", authMiddleware);
 app.use("/api/orgs/*", authMiddleware);
+app.use("/api/catalog/*", authMiddleware);
 
 app.route("/api/users", userRoutes);
 app.route("/api/orgs", orgRoutes);
-app.route("/api/cataloge", catalogRoutes);
+app.route("/api/catalog", catalogRoutes);
 
 // ─── Error Handling ───────────────────────────────────────────────────────────
 

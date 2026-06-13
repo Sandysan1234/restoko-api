@@ -101,7 +101,7 @@ orgRoutes.get(
   },
 );
 
-orgRoutes.post("/test", jsonValidator(createOrgSchema), async (c) => {
+orgRoutes.post("/", jsonValidator(createOrgSchema), async (c) => {
   const user = c.var.user!;
 
   const data = c.req.valid("json");

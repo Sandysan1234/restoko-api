@@ -66,7 +66,6 @@ class OrgRepository {
       .from(member)
       .innerJoin(user, eq(member.userId, user.id))
       .where(eq(member.organizationId, organizationId));
-
     return rows;
   }
 

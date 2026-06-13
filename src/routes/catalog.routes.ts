@@ -4,11 +4,18 @@ import { db } from "../db";
 import { items, member, user } from "../db/schema";
 import { AppEnv } from "../lib/factory";
 import { eq } from "drizzle-orm";
+import z, { string } from "zod";
+import { jsonValidator } from "../lib/validator";
+import { orgRepository } from "../repositories/org.repository";
 
 const catalogRoutes = new Hono<AppEnv>();
+// ─── Schemas ──────────────────────────────────────────────────────────────────
+
+// ─── Routes ───────────────────────────────────────────────────────────────────
 
 catalogRoutes.get("/", async (c) => {
   const user = c.var.user!;
+
   console.log(user.id);
 
   const cek = await db.select().from(member).where(eq(member.userId, user.id));
@@ -17,8 +24,7 @@ catalogRoutes.get("/", async (c) => {
 
   return successResponse(c, itemdata);
 });
-catalogRoutes.post("/", (c) => {
-  
+catalogRoutes.post("/", async (c) => {
   return successResponse(c, "post");
 });
 catalogRoutes.patch("/", (c) => {

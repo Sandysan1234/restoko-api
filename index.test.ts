@@ -35,7 +35,6 @@ test("2 + 2", async () => {
   expect(data.variation.name).toBe("Small");
 });
 test("tes apapaun", async (c) => {
-  const user = {c.var.user!;}
   const itemdata = await db.select().from(items);
   console.log(itemdata);
   expect(itemdata).toBe(itemdata);

@@ -7,14 +7,17 @@ import { NotFoundError, ForbiddenError, ConflictError } from "../lib/errors";
 import { orgRepository } from "../repositories/org.repository";
 import { db } from "../db";
 import { items, member, organization } from "../db/schema";
+import { and, eq } from "drizzle-orm";
 
 const orgRoutes = new Hono<AppEnv>();
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
-const orgIdParamSchema = z.object({
+const orgItemIdParamSchema = z.object({
   orgId: z.string().min(1),
+  itemId: z.coerce.number(),
 });
+const itemIdParamSchema = z.object({});
 
 const createOrgSchema = z.object({
   name: z.string().min(1),
@@ -53,7 +56,7 @@ orgRoutes.get("/", async (c) => {
  * GET /api/orgs/:orgId
  * Get an organization by ID (must be a member).
  */
-orgRoutes.get("/:orgId", paramValidator(orgIdParamSchema), async (c) => {
+orgRoutes.get("/:orgId", paramValidator(orgItemIdParamSchema), async (c) => {
   const { orgId } = c.req.valid("param");
   const user = c.var.user!;
 
@@ -74,7 +77,7 @@ orgRoutes.get("/:orgId", paramValidator(orgIdParamSchema), async (c) => {
  */
 orgRoutes.get(
   "/:orgId/members",
-  paramValidator(orgIdParamSchema),
+  paramValidator(orgItemIdParamSchema),
   async (c) => {
     const { orgId } = c.req.valid("param");
     const user = c.var.user!;
@@ -98,7 +101,7 @@ orgRoutes.get(
  */
 orgRoutes.get(
   "/:orgId/invitations",
-  paramValidator(orgIdParamSchema),
+  paramValidator(orgItemIdParamSchema),
   async (c) => {
     const { orgId } = c.req.valid("param");
     const user = c.var.user!;
@@ -150,12 +153,12 @@ orgRoutes.post("/", jsonValidator(createOrgSchema), async (c) => {
 });
 
 /**
- * GET /api/orgs/:orgId/members
- * List all members of an organization (must be a member).
+ * POST /api/orgs/:orgId/items
+ * create data items  of an organization (must be a member).
  */
 orgRoutes.post(
-  "/:orgId/members",
-  paramValidator(orgIdParamSchema),
+  "/:orgId/items",
+  paramValidator(orgItemIdParamSchema),
   jsonValidator(createcatSchema),
   async (c) => {
     const { orgId } = c.req.valid("param");
@@ -171,15 +174,53 @@ orgRoutes.post(
 
     const [createitems] = await db
       .insert(items)
-      .values({
-        organizationId: itemdata.organizationId,
-        itemCategoryId: itemdata.itemCategoryId,
-        name: itemdata.name,
-        slug: itemdata.slug,
-        price: itemdata.price,
-      })
+      .values(itemdata)
       .returning({ id: items.id });
     return successResponse(c, createitems);
   },
 );
+orgRoutes.get(
+  "/:orgId/items",
+  paramValidator(orgItemIdParamSchema),
+  async (c) => {
+    const { orgId } = c.req.valid("param");
+    const user = c.var.user!;
+    const membership = await orgRepository.findMember(orgId, user.id);
+    if (!membership)
+      throw new ForbiddenError("You are not a member of this organization");
+
+    const getAllItem = await db
+      .select()
+      .from(items)
+      .where(eq(items.organizationId, orgId));
+    return successResponse(c, getAllItem);
+  },
+);
+orgRoutes.get(
+  "/:orgId/items/:itemId",
+  paramValidator(orgItemIdParamSchema),
+  async (c) => {
+    const { orgId, itemId } = c.req.valid("param");
+    const user = c.var.user!;
+    const membership = await orgRepository.findMember(orgId, user.id);
+    if (!membership)
+      throw new ForbiddenError("You are not a member of this organization");
+
+    const getAllItem = await db
+      .select()
+      .from(items)
+      .where(and(eq(items.organizationId, orgId), eq(items.id, itemId)));
+    return successResponse(c, getAllItem);
+  },
+);
+
+orgRoutes.post("/:orgId/categories", async (c) => {
+  return successResponse(c, `ini create categories`);
+});
+orgRoutes.get("/:orgId/categories", async (c) => {
+  return successResponse(c, `ini get categories`);
+});
+orgRoutes.patch("/:orgId/categories", async (c) => {
+  return successResponse(c, `ini update categories`);
+});
 export { orgRoutes };

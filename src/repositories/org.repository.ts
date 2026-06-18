@@ -1,5 +1,5 @@
 import { eq, and } from "drizzle-orm";
-import {  db } from "../db";
+import { db } from "../db";
 import { organization, member, invitation, user } from "../db/schema";
 import type { Organization, Member, Invitation } from "../db/schema";
 
@@ -23,7 +23,7 @@ class OrgRepository {
     const [result] = await db
       .select()
       .from(organization)
-        .where(eq(organization.slug, slug))
+      .where(eq(organization.slug, slug))
       .limit(1);
     return result ?? null;
   }

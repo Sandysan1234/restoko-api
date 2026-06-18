@@ -642,7 +642,7 @@ orgRoutes.patch(
 );
 
 orgRoutes.delete(
-  "/orgid/taxes/:taxId",
+  "/:orgId/taxes/:taxId",
   paramValidator(taxesIdParamSchema),
   async (c) => {
     const user = c.var.user!;

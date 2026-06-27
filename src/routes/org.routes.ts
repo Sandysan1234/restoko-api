@@ -7,6 +7,7 @@ import { NotFoundError, ForbiddenError, ConflictError } from "../lib/errors";
 import { orgRepository } from "../repositories/org.repository";
 import { db } from "../db";
 import {
+  branches,
   itemAttributes,
   itemCategories,
   items,
@@ -92,6 +93,22 @@ const createTaxesSchema = z.object({
   status: z.enum(["active", "inactive"]).default("active"),
 });
 const updateTaxesSchema = createTaxesSchema.partial();
+
+const createBranchSchema = z.object({
+  organizationId: z.string(),
+  name: z.string().min(1),
+  email: z.string().min(1),
+  phone: z.string().min(1),
+  latitude: z.string(),
+  longitude: z.string(),
+  city: z.string().min(1),
+  state: z.string().min(1),
+  zipCode: z.string().min(1),
+  address: z.string().min(1),
+  status: z.enum(["active", "inactive"]).default("active"),
+});
+
+const updateBranchSchema = createBranchSchema.partial();
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
@@ -659,6 +676,30 @@ orgRoutes.delete(
       .where(and(eq(taxes.organizationId, orgId), eq(taxes.id, taxesId)))
       .returning({ id: taxes.id });
     return successResponse(c, taxesdata);
+  },
+);
+
+orgRoutes.post(
+  "/:orgId/branches",
+  paramValidator(orgIdParamSchema),
+  jsonValidator(createBranchSchema),
+  async (c) => {
+    const user = c.var.user!;
+    const { orgId } = c.req.valid("param");
+    const org = await orgRepository.findById(orgId);
+    if (!org) throw new NotFoundError("Organization");
+
+    // Verify user is a member
+    const membership = await orgRepository.findMember(orgId, user.id);
+    if (!membership)
+      throw new ForbiddenError("You are not a member of this organization");
+
+    const newBranchData = c.req.valid("json");
+    const branchData = await db
+      .insert(branches)
+      .values(newBranchData)
+      .returning({ id: branches.id });
+    return successResponse(c, branchData);
   },
 );
 

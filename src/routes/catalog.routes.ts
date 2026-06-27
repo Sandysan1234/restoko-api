@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { successResponse } from "../lib/response";
 import { db } from "../db";
-import { items, itemVariations, member, user } from "../db/schema";
+import { itemExtras, items, itemVariations, member, user } from "../db/schema";
 import { AppEnv } from "../lib/factory";
 import { and, eq } from "drizzle-orm";
 import z, { string } from "zod";
@@ -19,6 +19,10 @@ const itemVarIdParamSchema = z.object({
   itemId: z.number().positive(),
   itemVarId: z.number().positive(),
 });
+const itemExtraIdParamSchema = z.object({
+  itemId: z.number().positive(),
+  extraId: z.number().positive(),
+});
 
 const createItemVariationSchema = z.object({
   itemId: z.coerce.number(),
@@ -30,6 +34,15 @@ const createItemVariationSchema = z.object({
   status: z.enum(["active", "inactive"]).default("active"),
 });
 const updateItemVariationSchema = createItemVariationSchema.partial();
+
+const createItemExtrasSchema = z.object({
+  itemId: z.coerce.number(),
+  name: z.string().min(1),
+  price: z.string().refine((val) => !isNaN(Number(val))),
+  status: z.enum(["active", "inactive"]).default("active"),
+});
+
+const updateItemExtraSchema = createItemExtrasSchema.partial();
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
 catalogRoutes.post(
@@ -188,5 +201,145 @@ catalogRoutes.delete(
     return successResponse(c, itemVariationData);
   },
 );
+catalogRoutes.post(
+  "/:itemId/extras",
+  paramValidator(itemIdParamSchema),
+  jsonValidator(createItemExtrasSchema),
+  async (c) => {
+    const user = c.var.user!;
+    const { itemId } = c.req.valid("param");
+    const item = await db
+      .select()
+      .from(items)
+      .where(eq(items.id, itemId))
+      .limit(1);
+    if (!item) throw new NotFoundError("Items");
 
+    const membership = await db
+      .select()
+      .from(member)
+      .where(eq(member.userId, user.id));
+    if (!membership) {
+      throw new ForbiddenError("You are not a member");
+    }
+    const newItemExtras = c.req.valid("json");
+
+    const itemExtra = await db
+      .insert(itemExtras)
+      .values(newItemExtras)
+      .returning({ id: itemExtras.id });
+    return successResponse(c, itemExtra);
+  },
+);
+
+catalogRoutes.get(
+  "/:itemId/extras",
+  paramValidator(itemIdParamSchema),
+  jsonValidator(createItemExtrasSchema),
+  async (c) => {
+    const user = c.var.user!;
+    const { itemId } = c.req.valid("param");
+    const item = await db
+      .select()
+      .from(items)
+      .where(eq(items.id, itemId))
+      .limit(1);
+    if (!item) throw new NotFoundError("Items");
+
+    const membership = await db
+      .select()
+      .from(member)
+      .where(eq(member.userId, user.id));
+    if (!membership) {
+      throw new ForbiddenError("You are not a member");
+    }
+
+    const itemExtra = await db
+      .select()
+      .from(itemExtras)
+      .where(eq(itemExtras.itemId, itemId))
+      .limit(5);
+    return successResponse(c, itemExtra);
+  },
+);
+
+catalogRoutes.get(
+  "/:itemId/extras/:extraId",
+  paramValidator(itemExtraIdParamSchema),
+  async (c) => {
+    const user = c.var.user!;
+    const { itemId, extraId } = c.req.valid("param");
+    const item = await db
+      .select()
+      .from(items)
+      .where(eq(items.id, itemId))
+      .limit(1);
+    if (!item) throw new NotFoundError("Items");
+
+    const membership = await db
+      .select()
+      .from(member)
+      .where(eq(member.userId, user.id));
+    if (!membership) {
+      throw new ForbiddenError("You are not a member");
+    }
+
+    const extrasData = await db
+      .select()
+      .from(itemExtras)
+      .where(and(eq(itemExtras.itemId, itemId), eq(itemExtras.id, extraId)));
+
+    return successResponse(c, extrasData);
+  },
+);
+catalogRoutes.patch(
+  "/:itemId/extras/:extraId",
+  paramValidator(itemExtraIdParamSchema),
+  jsonValidator(updateItemExtraSchema),
+  async (c) => {
+    const user = c.var.user!;
+    const { itemId, extraId } = c.req.valid("param");
+    const item = await db
+      .select()
+      .from(items)
+      .where(eq(items.id, itemId))
+      .limit(1);
+    if (!item) throw new NotFoundError("Items");
+
+    const membership = await db
+      .select()
+      .from(member)
+      .where(eq(member.userId, user.id));
+    if (!membership) {
+      throw new ForbiddenError("You are not a member");
+    }
+    const updateExtra = c.req.valid("json");
+    const extraData = await db
+      .update(itemExtras)
+      .set(updateExtra)
+      .where(eq(itemExtras.id, extraId))
+      .returning({ id: itemExtras.id });
+    return successResponse(c, extraData);
+  },
+);
+
+catalogRoutes.delete(
+  ":/itemId/extras/:extraId",
+  paramValidator(itemExtraIdParamSchema),
+  async (c) => {
+    const user = c.var.user!;
+    const { itemId, extraId } = c.req.valid("param");
+    const item = await db.select().from(items).where(eq(items.id, itemId));
+    if (!item) throw new NotFoundError("Items");
+    const membership = await db
+      .select()
+      .from(member)
+      .where(eq(member.userId, user.id));
+
+    const extraData = await db
+      .delete(itemExtras)
+      .where(and(eq(itemExtras.itemId, itemId), eq(itemExtras.id, extraId)));
+    return successResponse(c, extraData);
+  },
+);
 export { catalogRoutes };

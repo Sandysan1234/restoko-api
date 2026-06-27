@@ -17,6 +17,8 @@ const app = factory.createApp();
 // ─── Global Middleware ────────────────────────────────────────────────────────
 
 app.use(logger());
+app.use(cors());
+
 app.use(requestId());
 app.use(secureHeaders());
 app.use(
@@ -56,6 +58,7 @@ app.use("/api/catalog/*", authMiddleware);
 app.route("/api/users", userRoutes);
 app.route("/api/orgs", orgRoutes);
 app.route("/api/catalog", catalogRoutes);
+
 
 // ─── Error Handling ───────────────────────────────────────────────────────────
 

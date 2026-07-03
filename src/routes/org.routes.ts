@@ -40,6 +40,10 @@ const taxesIdParamSchema = z.object({
   orgId: z.string().min(1),
   taxesId: z.coerce.number(),
 });
+const branchIdParamSchema = z.object({
+  orgId: z.string().min(1),
+  branchId: z.coerce.number().positive(),
+});
 
 const createOrgSchema = z.object({
   name: z.string().min(1),
@@ -261,10 +265,18 @@ orgRoutes.get("/:orgId/items", paramValidator(orgIdParamSchema), async (c) => {
     throw new ForbiddenError("You are not a member of this organization");
 
   const getAllItem = await db
-    .select()
+    .select({
+      id: items.id,
+      name: items.name,
+      categoryName: itemCategories.name,
+      price: items.price,
+      status: items.status,
+    })
     .from(items)
+    .innerJoin(itemCategories, eq(items.itemCategoryId, itemCategories.id))
     .where(eq(items.organizationId, orgId))
     .limit(5);
+  console.log(getAllItem);
   return successResponse(c, getAllItem);
 });
 
@@ -280,6 +292,17 @@ orgRoutes.get(
     const membership = await orgRepository.findMember(orgId, user.id);
     if (!membership)
       throw new ForbiddenError("You are not a member of this organization");
+    console.log(itemId);
+
+    const [item] = await db
+      .select()
+      .from(items)
+      .where(eq(items.id, itemId))
+      .limit(1);
+    if (!item) {
+      throw new NotFoundError("Items");
+    }
+    console.log(itemId);
 
     const [getItem] = await db
       .select()
@@ -699,6 +722,121 @@ orgRoutes.post(
       .insert(branches)
       .values(newBranchData)
       .returning({ id: branches.id });
+    return successResponse(c, branchData);
+  },
+);
+orgRoutes.get(
+  "/:orgId/branches",
+  paramValidator(orgIdParamSchema),
+  async (c) => {
+    const user = c.var.user!;
+    const { orgId } = c.req.valid("param");
+    const org = await orgRepository.findById(orgId);
+    if (!org) throw new NotFoundError("Organization");
+
+    // Verify user is a member
+    const membership = await orgRepository.findMember(orgId, user.id);
+    if (!membership)
+      throw new ForbiddenError("You are not a member of this organization");
+
+    const branchData = await db
+      .select({ name: branches.name, status: branches.status })
+      .from(branches)
+      .where(eq(branches.organizationId, orgId))
+      .limit(5);
+
+    return successResponse(c, branchData);
+  },
+);
+orgRoutes.get(
+  "/:orgId/branches/:branchId",
+  paramValidator(branchIdParamSchema),
+  async (c) => {
+    const user = c.var.user!;
+    const { orgId, branchId } = c.req.valid("param");
+    const org = await orgRepository.findById(orgId);
+    if (!org) throw new NotFoundError("Organization");
+
+    // Verify user is a member
+    const membership = await orgRepository.findMember(orgId, user.id);
+    if (!membership)
+      throw new ForbiddenError("You are not a member of this organization");
+    const [branch] = await db
+      .select()
+      .from(branches)
+      .where(eq(branches.id, branchId))
+      .limit(1);
+    if (!branch) {
+      throw new NotFoundError("branches");
+    }
+    const [branchData] = await db
+      .select()
+      .from(branches)
+      .where(and(eq(branches.organizationId, orgId), eq(branches.id, branchId)))
+      .limit(5);
+    return successResponse(c, branchData);
+  },
+);
+orgRoutes.patch(
+  "/:orgId/branches/:branchId",
+  paramValidator(branchIdParamSchema),
+  jsonValidator(updateBranchSchema),
+  async (c) => {
+    const user = c.var.user!;
+    const { orgId, branchId } = c.req.valid("param");
+    const org = await orgRepository.findById(orgId);
+    if (!org) throw new NotFoundError("Organization");
+
+    // Verify user is a member
+    const membership = await orgRepository.findMember(orgId, user.id);
+    if (!membership)
+      throw new ForbiddenError("You are not a member of this organization");
+
+    const [branch] = await db
+      .select()
+      .from(branches)
+      .where(eq(branches.id, branchId))
+      .limit(1);
+    if (!branch) {
+      throw new NotFoundError("branches");
+    }
+    const updateBranch = c.req.valid("json");
+    const [branchData] = await db
+      .update(branches)
+      .set(updateBranch)
+      .from(branches)
+      .where(
+        and(eq(branches.organizationId, orgId), eq(branches.id, branchId)),
+      );
+    return successResponse(c, branchData);
+  },
+);
+orgRoutes.delete(
+  "/:orgId/branches/:branchId",
+  paramValidator(branchIdParamSchema),
+  async (c) => {
+    const user = c.var.user!;
+    const { orgId, branchId } = c.req.valid("param");
+    const org = await orgRepository.findById(orgId);
+    if (!org) throw new NotFoundError("Organization");
+
+    // Verify user is a member
+    const membership = await orgRepository.findMember(orgId, user.id);
+    if (!membership)
+      throw new ForbiddenError("You are not a member of this organization");
+
+    const [branch] = await db
+      .select()
+      .from(branches)
+      .where(eq(branches.id, branchId))
+      .limit(1);
+    if (!branch) {
+      throw new NotFoundError("branches");
+    }
+    const [branchData] = await db
+      .delete(branches)
+      .where(and(eq(branches.organizationId, orgId), eq(branches.id, branchId)))
+      .returning({ deletedId: branches.id });
     return successResponse(c, branchData);
   },
 );

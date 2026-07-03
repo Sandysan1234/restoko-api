@@ -99,10 +99,10 @@ const createTaxesSchema = z.object({
 const updateTaxesSchema = createTaxesSchema.partial();
 
 const createBranchSchema = z.object({
-  organizationId: z.string(),
+  // organizationId: z.string(),
   name: z.string().min(1),
-  email: z.string().min(1),
-  phone: z.string().min(1),
+  email: z.string(),
+  phone: z.string(),
   latitude: z.string(),
   longitude: z.string(),
   city: z.string().min(1),
@@ -718,9 +718,12 @@ orgRoutes.post(
       throw new ForbiddenError("You are not a member of this organization");
 
     const newBranchData = c.req.valid("json");
-    const branchData = await db
+    const [branchData] = await db
       .insert(branches)
-      .values(newBranchData)
+      .values({
+        organizationId: orgId,
+        ...newBranchData,
+      })
       .returning({ id: branches.id });
     return successResponse(c, branchData);
   },
@@ -740,7 +743,7 @@ orgRoutes.get(
       throw new ForbiddenError("You are not a member of this organization");
 
     const branchData = await db
-      .select({ name: branches.name, status: branches.status })
+      .select({ id: branches.id, name: branches.name, status: branches.status })
       .from(branches)
       .where(eq(branches.organizationId, orgId))
       .limit(5);
